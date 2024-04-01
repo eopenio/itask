@@ -1,6 +1,7 @@
 package redis
 
 import (
+	"errors"
 	"github.com/eopenio/itask/v3/backends"
 	"github.com/eopenio/itask/v3/ierrors"
 	"github.com/eopenio/itask/v3/message"
@@ -40,9 +41,11 @@ func (r *Backend) Activate() {
 func (r *Backend) SetPoolSize(n int) {
 	r.poolSize = n
 }
+
 func (r *Backend) GetPoolSize() int {
 	return r.poolSize
 }
+
 func (r *Backend) SetResult(result message.Result, exTime int) error {
 	b, err := yjson.TaskJson.Marshal(result)
 
@@ -52,12 +55,13 @@ func (r *Backend) SetResult(result message.Result, exTime int) error {
 	err = r.client.Set(result.GetBackendKey(), b, time.Duration(exTime)*time.Second)
 	return err
 }
+
 func (r *Backend) GetResult(key string) (message.Result, error) {
 	var result message.Result
 
 	b, err := r.client.Get(key).Bytes()
 	if err != nil {
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			return result, ierrors.ErrNilResult{}
 		}
 		return result, err

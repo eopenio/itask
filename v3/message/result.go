@@ -1,8 +1,10 @@
 package message
 
 import (
+	"errors"
 	"fmt"
 	"github.com/eopenio/itask/v3/util/yjson"
+	"strings"
 )
 
 type resultStatusChoice struct {
@@ -57,12 +59,12 @@ var StatusToWorkflowStatus = map[int]string{
 }
 
 type Result struct {
-	Id         string      `json:"id"`
-	Status     int         `json:"status"` // 0:sent , 1:first running , 2: waiting to retry , 3: running , 4: success , 5: Failure
-	FuncReturn []string    `json:"func_return"`
-	RetryCount int         `json:"retry_count"`
-	Workflow   [][2]string `json:"workflow"` // [["workName","status"],] ;  status: waiting , running , success , failure , expired , abort
-	Err        string      `json:"err"`
+	Id         string      `json:"id" gorm:"column:task_id;comment:任务ID;type:varchar(50);size:50;uniqueIndex:idx_taskid;primaryKey"`
+	Status     int         `json:"status" gorm:"column:status;comment:任务状态;type:int;size:10;index:idx_status"` // 0:sent , 1:first running , 2: waiting to retry , 3: running , 4: success , 5: Failure
+	FuncReturn []string    `json:"func_return" gorm:"column:func_return;comment:任务返回内容;type:mediumtext;"`
+	RetryCount int         `json:"retry_count" gorm:"column:retry_count;comment:任务重试次数;type:int;size:10;"`
+	Workflow   [][2]string `json:"workflow" gorm:"-"` // [["workName","status"],] ;  status: waiting , running , success , failure , expired , abort
+	Err        string      `json:"err" gorm:"column:error_msg;comment:错误信息;type:varchar(256);size:50;"`
 }
 
 func NewResult(id string) Result {
@@ -72,7 +74,14 @@ func NewResult(id string) Result {
 }
 
 func (r Result) GetBackendKey() string {
-	return "Task:Backend:" + r.Id
+	return "itask:backend:" + r.Id
+}
+
+func (r Result) GetIdFromKey(key string) string {
+	if len(strings.Split(key, ":")) == 3 {
+		return strings.Split(key, ":")[2]
+	}
+	return errors.New("task key is invalid").Error()
 }
 
 func (r *Result) SetStatusRunning() {
@@ -98,16 +107,6 @@ func (r Result) Gets(args ...interface{}) error {
 	}
 	return nil
 }
-
-// 过时: 此方法只能用于v1.0.0，高版本中，如果值为int64,uint64类型，会导致获取的值不对
-// Deprecated: only can use in v1.0.0
-// func (r Result) GetInterface(index int) (interface{}, error) {
-//
-//		var result interface{}
-//
-//		err := yjson.TaskJson.Unmarshal([]byte(r.FuncReturn[index]), &result)
-//		return result, err
-//	}
 
 func (r Result) GetInt64(index int) (int64, error) {
 	var v int64

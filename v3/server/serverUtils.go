@@ -25,12 +25,10 @@ func newServerUtils(broker brokers.BrokerInterface, backend backends.BackendInte
 }
 
 func (b ServerUtils) GetQueueName(groupName string) string {
-	//return "Task:Queue:" + groupName
 	return "itask:queue:" + groupName
 }
 
 func (b ServerUtils) GetDelayGroupName(groupName string) string {
-	//return "Delay:" + groupName
 	return "delay:" + groupName
 }
 
